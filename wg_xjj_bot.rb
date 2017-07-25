@@ -2,8 +2,9 @@ require 'telegram/bot'
 require 'yaml'
 
 
-TOKEN = "" # tokens here
+TOKEN = ""
 WATCHER = "llqoli"
+COMMANDS = ['/watchers_add','/watchers_remove','/watchers_lst']
 
 
 @bot = Telegram::Bot::Client.new(TOKEN)  
@@ -23,17 +24,27 @@ end
 
 def handle_msg(msg)
 	user = msg.from.username
+	
+	puts "recv msg from: #{user} - contents:#{msg.text}"
 
-	puts "rece msg from #{user}"
-	case msg.text
-	when '/watchers_add'
-		add_2_lst user
-		@bot.api.send_message(chat_id: msg.chat.id, text: "@#{user} 您已经加入通知列表")
-	when '/watchers_remove'
-		remove_from_lst user
-		@bot.api.send_message(chat_id: msg.chat.id, text: "@#{user} 您已经被移出通知列表 ")
-	when '/watchers_lst'
-		# TODO
+	unless msg.text.nil?
+
+		if msg.text.start_with?(*COMMANDS)
+			# check whether has username
+			@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "請在設定 username 后再試一次") and return if user.nil?
+		end
+		
+		case 
+		when msg.text.start_with?("/watchers_add")
+			add_2_lst user
+			@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "您已經加入到通知列表")
+		when msg.text.start_with?("/watchers_remove")
+			remove_from_lst user
+			@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "您已經被移出通知列表 ")
+		when msg.text.start_with?("/watchers_lst")
+			subscribers = get_watcher_lst.to_a.join("、")
+			@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "當前訂閱者：#{subscribers}")
+		end
 	end
 
 end
@@ -54,7 +65,7 @@ def get_watcher_lst
 end
 
 
- @bot.listen do |message|
+@bot.listen do |message|
   	
   	sender = message.from.username
   	puts "sender:#{sender}"
@@ -62,7 +73,7 @@ end
   		# 检查是不是要关注的人
   		unless message.photo.empty?
   			user_lst = get_watcher_lst.map {|watcher| "@#{watcher}"}.join(",")
-  			@bot.api.send_message(chat_id: message.chat.id, text: "#{user_lst} 小姐姐发福利啦！ ")
+  			@bot.api.send_message(chat_id: message.chat.id,reply_to_message_id: message.message_id, text: "#{user_lst} 小姐姐發福利啦！ ")
   		end
   	else
   		handle_msg message
