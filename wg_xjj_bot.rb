@@ -2,7 +2,7 @@ require 'telegram/bot'
 require 'yaml'
 
 
-TOKEN = ""
+TOKEN = ENV['tg_token'] 
 WATCHER = "llqoli"
 COMMANDS = ['/watchers_add','/watchers_remove','/watchers_lst']
 
@@ -27,26 +27,25 @@ def handle_msg(msg)
 	
 	puts "recv msg from: #{user} - contents:#{msg.text}"
 
-	unless msg.text.nil?
-
-		if msg.text.start_with?(*COMMANDS)
-			# check whether has username
-			@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "請在設定 username 后再試一次") and return if user.nil?
-		end
-		
-		case 
-		when msg.text.start_with?("/watchers_add")
-			add_2_lst user
-			@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "您已經加入到通知列表")
-		when msg.text.start_with?("/watchers_remove")
-			remove_from_lst user
-			@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "您已經被移出通知列表 ")
-		when msg.text.start_with?("/watchers_lst")
-			subscribers = get_watcher_lst.to_a.join("、")
-			@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "當前訂閱者：#{subscribers}")
-		end
+	return if msg.text.nil?
+	
+	if msg.text.start_with?(*COMMANDS)
+		# check whether has username
+		@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "請在設定 username 后再試一次") and return if user.nil?
 	end
-
+	
+	case 
+	when msg.text.start_with?("/watchers_add")
+		add_2_lst user
+		@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "您已經加入到通知列表")
+	when msg.text.start_with?("/watchers_remove")
+		remove_from_lst user
+		@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "您已經被移出通知列表 ")
+	when msg.text.start_with?("/watchers_lst")
+		subscribers = get_watcher_lst.to_a.join("、")
+		@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "當前訂閱者：#{subscribers}")
+	end
+	
 end
 
 
