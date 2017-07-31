@@ -1,5 +1,7 @@
 require 'telegram/bot'
 require 'yaml'
+require 'httpclient'
+require 'json'
 
 
 TOKEN = ENV['tg_token'] 
@@ -19,6 +21,33 @@ def remove_from_lst(username)
 	hash = load_notify_users
 	hash[:config].delete username
 	persist_config hash
+end
+
+
+def lucky(msg)
+	page = rand 2000
+	url = "https://api.avgle.com/v1/videos/#{page}?limit=25"
+	clnt = HTTPClient.new 
+	res = clnt.get url
+	begin
+		
+		jsonRet = JSON.parse res.content
+		if jsonRet["success"] 
+			videos = jsonRet["response"]["videos"]
+			index = rand videos.size
+			video = videos[index]
+			# 
+			raw_content = "<b>#{video["title"]}</b><a href=\"#{video["video_url"]}\">View</a> "
+
+			@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id,parse_mode:'HTML', text: raw_content) and return
+
+		else
+			puts "parse failed"
+		end
+
+	rescue Exception => e
+		puts e
+	end
 end
 
 
@@ -44,6 +73,8 @@ def handle_msg(msg)
 	when msg.text.start_with?("/watchers_lst")
 		subscribers = get_watcher_lst.to_a.join("、")
 		@bot.api.send_message(chat_id: msg.chat.id, reply_to_message_id: msg.message_id, text: "當前訂閱者：#{subscribers}")
+	when msg.text.start_with?("/lucky")
+		lucky msg
 	end
 	
 end
@@ -66,15 +97,20 @@ end
 
 @bot.listen do |message|
   	
-  	sender = message.from.username
-  	puts "sender:#{sender}"
-  	if sender == WATCHER
-  		# 检查是不是要关注的人
-  		unless message.photo.empty?
-  			user_lst = get_watcher_lst.map {|watcher| "@#{watcher}"}.join(",")
-  			@bot.api.send_message(chat_id: message.chat.id,reply_to_message_id: message.message_id, text: "#{user_lst} 小姐姐發福利啦！ ")
-  		end
-  	else
-  		handle_msg message
+  	begin
+  		sender = message.from.username
+  		puts "sender:#{sender}"
+	  	if sender == WATCHER
+	  		# 检查是不是要关注的人
+	  		unless message.photo.empty?
+	  			user_lst = get_watcher_lst.map {|watcher| "@#{watcher}"}.join(",")
+	  			@bot.api.send_message(chat_id: message.chat.id,reply_to_message_id: message.message_id, text: "#{user_lst} 小姐姐發福利啦！ ")
+	  		end
+	  	else
+	  		handle_msg message
+	  	end
+  	rescue Exception => e
+  		puts "error occurs: #{e}"
   	end
+  	
 end
